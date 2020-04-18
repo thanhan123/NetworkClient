@@ -14,7 +14,9 @@ public final class CombineNetworkingClient {
 
     public init() {}
 
-    func performRequest(url: URL, parameters: [String: String], requestType: RequestType) -> AnyPublisher<Data, NetworkError> {
+    public func performRequest(url: URL,
+                               parameters: [String: String],
+                               requestType: RequestType) -> AnyPublisher<Data, NetworkError> {
         guard let request = buildRequest(url: url, parameters: parameters, requestType: requestType) else {
             return Empty().eraseToAnyPublisher()
         }
