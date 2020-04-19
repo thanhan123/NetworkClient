@@ -35,7 +35,7 @@ public final class CombineNetworkingClient {
     private func buildRequest(url: URL,
                               parameters: [String: String],
                               requestType: RequestType) -> URLRequest? {
-        let updatedURL: URL
+        var request: URLRequest
         switch requestType {
         case .get:
             guard var components = URLComponents(string: url.absoluteString) else {
@@ -48,11 +48,17 @@ public final class CombineNetworkingClient {
             guard let url = components.url else {
                 return nil
             }
-            updatedURL = url
+            request = URLRequest(url: url)
+
+        case .post:
+            request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.httpBody = try? JSONSerialization.data(withJSONObject: parameters, options: [])
+
         default:
-            updatedURL = url
+            request = URLRequest(url: url)
         }
 
-        return URLRequest(url: updatedURL)
+        return request
     }
 }
