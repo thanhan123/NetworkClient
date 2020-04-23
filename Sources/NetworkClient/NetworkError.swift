@@ -11,4 +11,5 @@ import Foundation
 public enum NetworkError: Error {
     case noInternet
     case noData
+    case otherError(object: Any)
 }

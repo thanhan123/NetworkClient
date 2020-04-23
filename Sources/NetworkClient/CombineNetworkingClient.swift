@@ -22,12 +22,25 @@ public final class CombineNetworkingClient {
         }
         return session
             .dataTaskPublisher(for: request)
-            .map(\.data)
-            .mapError{ error in
-                if error.code == .notConnectedToInternet {
+            .tryMap{ data, response in
+                if let httpResponse = response as? HTTPURLResponse,
+                    !(200 ... 299 ~= httpResponse.statusCode) {
+                    throw NetworkError.otherError(object: data)
+                }
+                return data
+        }
+        .mapError{ error in
+            switch error {
+            case let urlError as URLError:
+                if urlError.code == .notConnectedToInternet {
                     return .noInternet
                 }
-                return .noData
+            case let networkError as NetworkError:
+                return networkError
+            default:
+                break
+            }
+            return .noData
         }
         .eraseToAnyPublisher()
     }
@@ -35,7 +48,7 @@ public final class CombineNetworkingClient {
     private func buildRequest(url: URL,
                               parameters: [String: String],
                               requestType: RequestType) -> URLRequest? {
-        var request: URLRequest
+        let updatedURL: URL
         switch requestType {
         case .get:
             guard var components = URLComponents(string: url.absoluteString) else {
@@ -48,17 +61,11 @@ public final class CombineNetworkingClient {
             guard let url = components.url else {
                 return nil
             }
-            request = URLRequest(url: url)
-
-        case .post:
-            request = URLRequest(url: url)
-            request.httpMethod = "POST"
-            request.httpBody = try? JSONSerialization.data(withJSONObject: parameters, options: [])
-
+            updatedURL = url
         default:
-            request = URLRequest(url: url)
+            updatedURL = url
         }
 
-        return request
+        return URLRequest(url: updatedURL)
     }
 }
