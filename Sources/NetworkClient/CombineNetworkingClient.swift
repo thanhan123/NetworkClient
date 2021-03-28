@@ -10,7 +10,7 @@ import Foundation
 import Combine
 import AnyCodable
 
-public final class CombineNetworkingClient {
+public struct CombineNetworkingClient {
     private let session = URLSession.shared
     
     public init() {}
