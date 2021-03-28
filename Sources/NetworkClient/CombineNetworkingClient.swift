@@ -15,11 +15,12 @@ public struct CombineNetworkingClient {
     
     public init() {}
     
-    public func performRequest(url: URL,
-                               parameters: [String: AnyCodable],
-                               requestType: RequestType,
-                               token: String? = nil) -> AnyPublisher<Data, Error> {
-        guard let request = buildRequest(url: url, parameters: parameters, requestType: requestType, token: token) else {
+    public func performRequest(
+        url: URL,
+        requestType: RequestType,
+        token: String? = nil
+    ) -> AnyPublisher<Data, Error> {
+        guard let request = buildRequest(url: url, requestType: requestType, token: token) else {
             return Empty().eraseToAnyPublisher()
         }
         return session
@@ -27,33 +28,19 @@ public struct CombineNetworkingClient {
             .tryMap{ data, response in
                 if let httpResponse = response as? HTTPURLResponse,
                    !(200 ... 299 ~= httpResponse.statusCode) {
-                    throw NetworkError.otherError(object: data)
+                    throw NetworkError.otherError(object: response)
                 }
                 return data
-            }
-            .mapError{ error in
-                switch error {
-                case let urlError as URLError:
-                    if urlError.code == .notConnectedToInternet {
-                        return NetworkError.noInternet
-                    }
-                case let networkError as NetworkError:
-                    return networkError
-                default:
-                    break
-                }
-                return NetworkError.noData
             }
             .eraseToAnyPublisher()
     }
     
     private func buildRequest(url: URL,
-                              parameters: [String: AnyCodable],
                               requestType: RequestType,
                               token: String?) -> URLRequest? {
         var request = URLRequest(url: url)
         switch requestType {
-        case .get:
+        case .get(let parameters):
             guard var components = URLComponents(string: url.absoluteString) else {
                 return nil
             }
@@ -66,26 +53,26 @@ public struct CombineNetworkingClient {
             }
             request = URLRequest(url: url)
             request.allHTTPHeaderFields = ["Content-Type":"application/json; charset=utf-8"]
-        case .post:
+        case .post(let parameters):
             request.httpMethod = "POST"
             request.httpBody = try? JSONEncoder().encode(parameters)
             request.allHTTPHeaderFields = ["Content-Type":"application/json; charset=utf-8"]
-        case let .postBody(fileData, fieldName, fileName, mimeType):
+        case .postBody(let data):
             request.httpMethod = "POST"
             let boundary = "Boundary-\(UUID().uuidString)"
             request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
             request.httpBody = createBodyDataRequest(
-                fileData: fileData,
+                fileData: data.fileData,
                 boundary: boundary,
-                fieldName: fieldName,
-                fileName: fileName,
-                mimeType: mimeType
+                fieldName: data.fieldName,
+                fileName: data.fileName,
+                mimeType: data.mimeType
             )
-        case .delete:
+        case .delete(let parameters):
             request.httpMethod = "DELETE"
             request.httpBody = try? JSONEncoder().encode(parameters)
             request.allHTTPHeaderFields = ["Content-Type":"application/json; charset=utf-8"]
-        case .put:
+        case .put(let parameters):
             request.httpMethod = "PUT"
             request.httpBody = try? JSONEncoder().encode(parameters)
             request.allHTTPHeaderFields = ["Content-Type":"application/json; charset=utf-8"]

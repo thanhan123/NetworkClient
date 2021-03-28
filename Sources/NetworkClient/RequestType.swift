@@ -7,14 +7,31 @@
 //
 
 import Foundation
+import AnyCodable
 
 public enum RequestType {
-    case get
-    case post
-    case put
-    case delete
-    case postBody(fileData: Data,
-                  fieldName: String,
-                  fileName: String,
-                  mimeType: String)
+    case get(parameters: [String: AnyCodable] = [:])
+    case post(parameters: [String: AnyCodable] = [:])
+    case put(parameters: [String: AnyCodable] = [:])
+    case delete(parameters: [String: AnyCodable] = [:])
+    case postBody(data: PostBodyData)
+}
+
+public struct PostBodyData {
+    let fileData: Data
+    let fieldName: String
+    let fileName: String
+    let mimeType: String
+    
+    public init(
+        fileData: Data,
+        fileName: String,
+        fieldName: String,
+        mimeType: String
+    ) {
+        self.fileData = fileData
+        self.fileName = fileName
+        self.fieldName = fieldName
+        self.mimeType = mimeType
+    }
 }
